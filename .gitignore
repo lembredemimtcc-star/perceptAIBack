@@ -1,0 +1,81 @@
+# ============================================================
+# SEGREDOS E CONFIGURAÇÕES DE AMBIENTE
+# ============================================================
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+# Manter apenas o appsettings.json base (sem segredos)
+
+# ============================================================
+# BUILD E COMPILAÇÃO (.NET)
+# ============================================================
+bin/
+obj/
+out/
+
+# ============================================================
+# MODELO DE IA (arquivos grandes gerados por treinamento)
+# ============================================================
+ML/*.onnx
+ML/*.onnx.data
+ML/*.pt
+ML/*.pth
+ML/*.pb
+checkpoints/
+
+# ============================================================
+# IDEs E EDITORES
+# ============================================================
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.idea/
+*.swp
+*~
+
+# ============================================================
+# PACOTES E DEPENDÊNCIAS
+# ============================================================
+packages/
+*.nupkg
+*.snupkg
+
+# ============================================================
+# LOGS E ARQUIVOS TEMPORÁRIOS
+# ============================================================
+*.log
+logs/
+*.tmp
+*.temp
+Thumbs.db
+.DS_Store
+
+# ============================================================
+# CERTIFICADOS E CHAVES CRIPTOGRÁFICAS
+# ============================================================
+*.pfx
+*.p12
+*.pem
+*.key
+*.cer
+*.crt
+
+# ============================================================
+# PUBLICAÇÃO E DEPLOY
+# ============================================================
+publish/
+**/Properties/launchSettings.json
+
+# ============================================================
+# TESTES E COBERTURA
+# ============================================================
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
