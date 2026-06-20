@@ -3,23 +3,26 @@ using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using PerceptAI.API.ML;
 using PerceptAI.API.Services;
+using PerceptAI.API.Settings;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Bind Kestrel to all network interfaces (0.0.0.0) for both HTTP and HTTPS.
+// Bind to all network interfaces for both HTTP and HTTPS (development only)
 builder.WebHost.UseUrls("http://0.0.0.0:5198", "https://0.0.0.0:7290");
 
-// =====================================================================
-// REGISTRO DE SERVIÇOS DO CONTAINER DI
-// =====================================================================
+// ------------------------------------------------------------------
+// CONFIGURAÇÕES
+// ------------------------------------------------------------------
+// Bind Supabase settings
+builder.Services.Configure<SupabaseSettings>(builder.Configuration.GetSection(SupabaseSettings.SectionName));
 
-builder.Services.AddControllers();
-
-// Configuração do CORS para permitir que o front-end em React Native (Expo)
-// possa efetuar requisições sem restrições de domínios cruzados localmente.
+// ------------------------------------------------------------------
+// CORS
+// ------------------------------------------------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -30,61 +33,64 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// ------------------------------------------------------------------
+// OpenAPI / Swagger (Scalar)
+// ------------------------------------------------------------------
 builder.Services.AddOpenApi();
+// builder.Services.AddScalarApiReference(); // Removed: method not available on IServiceCollection
 
-// 1. Registrar ImagePreprocessingService como Singleton
+// ------------------------------------------------------------------
+// Serviços de negócio
+// ------------------------------------------------------------------
+builder.Services.AddControllers();
 builder.Services.AddSingleton<ImagePreprocessingService>();
-
-// 2. Registrar ModelLoader como Singleton (garante carregamento único do modelo)
 builder.Services.AddSingleton(sp =>
 {
-    // Resolve o caminho do modelo ONNX na pasta ML
     var modelPath = Path.Combine(AppContext.BaseDirectory, "ML", "model.onnx");
     if (!File.Exists(modelPath))
     {
         modelPath = Path.Combine(Directory.GetCurrentDirectory(), "ML", "model.onnx");
     }
-
     if (!File.Exists(modelPath))
     {
-        throw new FileNotFoundException(
-            $"O modelo ONNX não foi encontrado no caminho especificado: '{modelPath}'. " +
-            "Certifique-se de executar o script Python 'export_onnx.py' antes de rodar a API.");
+        throw new FileNotFoundException($"O modelo ONNX não foi encontrado em '{modelPath}'.");
     }
-
     return new ModelLoader(modelPath);
 });
-
-// 3. Registrar EmotionDetectionService como Singleton
 builder.Services.AddSingleton<EmotionDetectionService>();
+builder.Services.AddScoped<SupabaseService>();
+
+// ------------------------------------------------------------------
+// HttpClient para Supabase (pré-configurado)
+// ------------------------------------------------------------------
+builder.Services.AddHttpClient("supabase", (sp, client) =>
+{
+    var settings = sp.GetRequiredService<IOptions<SupabaseSettings>>().Value;
+    if (string.IsNullOrWhiteSpace(settings.Url))
+        throw new InvalidOperationException("SupabaseSettings:Url não configurado.");
+    if (string.IsNullOrWhiteSpace(settings.ServiceRoleKey))
+        throw new InvalidOperationException("SupabaseSettings:ServiceRoleKey não configurado.");
+    client.BaseAddress = new Uri($"{settings.Url.TrimEnd('/')}/rest/v1/");
+    client.DefaultRequestHeaders.Add("apikey", settings.ServiceRoleKey);
+    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {settings.ServiceRoleKey}");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 
 var app = builder.Build();
-
-// =====================================================================
-// PIPELINE DE REQUISIÇÕES HTTP (MIDDLEWARES)
-// =====================================================================
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference(); // Ativa a interface de documentação visual em /scalar/v1
-    
-    // Redireciona /swagger para /scalar/v1 para evitar erros de 404
-    app.MapGet("/swagger", async context =>
+    app.MapScalarApiReference();
+    app.MapGet("/swagger", async ctx =>
     {
-        context.Response.Redirect("/scalar/v1");
-        await System.Threading.Tasks.Task.CompletedTask;
+        ctx.Response.Redirect("/scalar/v1");
+        await Task.CompletedTask;
     });
 }
 
-// Aplica a política CORS
 app.UseCors("AllowAll");
-
-// app.UseHttpsRedirection();
-
+// app.UseHttpsRedirection(); // Disabled for local development
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

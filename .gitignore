@@ -4,4 +4,3 @@ obj/
 *.suo
 .vs/
 appsettings.Development.json
-ML/model.onnx
