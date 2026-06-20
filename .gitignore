@@ -1,21 +1,7 @@
-# Compilação e Build
 bin/
 obj/
-
-# Arquivos de configurações do usuário
 *.user
 *.suo
-*.userosscache
-*.sln.docstates
-
-# IDEs e Editores
 .vs/
-.vscode/
-*.swp
-*~
-
-# Arquivos locais de configuração do ambiente (chaves de dev)
 appsettings.Development.json
-
-# Modelo de IA de grande porte gerado pelo treinamento
 ML/model.onnx

@@ -5,8 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PerceptAI.API.ML;
 using PerceptAI.API.Services;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Bind Kestrel to all network interfaces (0.0.0.0) for both HTTP and HTTPS.
+builder.WebHost.UseUrls("http://0.0.0.0:5198", "https://0.0.0.0:7290");
 
 // =====================================================================
 // REGISTRO DE SERVIÇOS DO CONTAINER DI
@@ -64,12 +68,20 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(); // Ativa a interface de documentação visual em /scalar/v1
+    
+    // Redireciona /swagger para /scalar/v1 para evitar erros de 404
+    app.MapGet("/swagger", async context =>
+    {
+        context.Response.Redirect("/scalar/v1");
+        await System.Threading.Tasks.Task.CompletedTask;
+    });
 }
 
 // Aplica a política CORS
 app.UseCors("AllowAll");
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
