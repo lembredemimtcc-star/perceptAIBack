@@ -1,4 +1,3 @@
-// DetectionController with async Supabase integration
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -26,41 +25,55 @@ namespace PerceptAI.API.Controllers
             _preprocessingService = preprocessingService;
             _detectionService = detectionService;
             _supabaseService = supabaseService;
+            // Carrega o threshold padrão (75%) do appsettings.json
             _threshold = configuration.GetValue<double>("DetectionSettings:Threshold", 0.75);
         }
 
+        /// <summary>
+        /// Recebe uma imagem em Base64 e o ID do paciente, executa a inferência ONNX
+        /// e persiste a detecção no Supabase (caso a confiança supere o threshold).
+        /// </summary>
         [HttpPost("detect")]
-        public async Task<ActionResult<DetectionResponse>> Detect([FromBody] DetectionRequest request)
+        public async Task<IActionResult> Detect([FromBody] DetectionRequest request)
         {
+            // Validação básica
             if (request == null || string.IsNullOrWhiteSpace(request.Image))
+            {
                 return BadRequest(new { message = "Corpo de requisição inválido ou imagem vazia." });
+            }
 
             try
             {
-                float[] normalizedData = _preprocessingService.PreprocessBase64Image(request.Image);
-                var (emotion, confidence) = _detectionService.DetectEmotion(normalizedData);
-                string finalEmotion = confidence >= _threshold ? emotion : "neutro";
-                var detectedAt = DateTime.UtcNow;
+                // Pré-processamento da imagem Base64
+                float[] normalized = _preprocessingService.PreprocessBase64Image(request.Image);
 
-                if (finalEmotion != "neutro" && !string.IsNullOrWhiteSpace(request.PatientId))
+                // Inferência do modelo
+                var (emotion, confidence) = _detectionService.DetectEmotion(normalized);
+
+                // Monta a resposta
+                var response = new DetectionResponse
                 {
-                    _ = _supabaseService.SaveDetectionAsync(request.PatientId, finalEmotion, confidence, detectedAt);
+                    Emotion = emotion,
+                    Confidence = confidence,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Persiste no Supabase se a confiança atingir o limiar
+                if (confidence >= _threshold)
+                {
+                    await _supabaseService.SaveDetectionAsync(request.PatientId, emotion, confidence, response.Timestamp);
                 }
 
-                return Ok(new DetectionResponse
-                {
-                    Emotion = finalEmotion,
-                    Confidence = confidence,
-                    Timestamp = detectedAt,
-                });
+                return Ok(response);
             }
-            catch (FormatException ex)
+            catch (FormatException)
             {
-                return BadRequest(new { message = "Formato base64 inválido.", error = ex.Message });
+                return BadRequest(new { message = "Formato Base64 da imagem é inválido." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, new { message = "Erro interno ao processar detecção.", error = ex.Message });
+                // Erro interno inesperado
+                return StatusCode(500, new { message = "Erro interno ao processar a detecção." });
             }
         }
     }

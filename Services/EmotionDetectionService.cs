@@ -12,7 +12,7 @@ namespace PerceptAI.API.Services
         private readonly ModelLoader _modelLoader;
         
         // Mapeamento das 5 emoções na ordem exata de saída do classificador da rede
-        private readonly string[] _emotions = { "medo", "enjoo", "dor", "sono", "tristeza" };
+        private readonly string[] _emotions = { "dor", "enjoo", "medo", "sono", "tristeza", "neutro", "acordado", "dormindo" };
 
         public EmotionDetectionService(ModelLoader modelLoader)
         {

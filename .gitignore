@@ -1,6 +1,21 @@
+# Build
 bin/
 obj/
+
+# Visual Studio
+.vs/
 *.user
 *.suo
-.vs/
-appsettings.Development.json
+
+# Credenciais e configurações sensíveis
+appsettings.json
+
+# Modelo ONNX (arquivo grande)
+ML/model.onnx
+ML/model.onnx.data
+
+# Pasta de imagens de debug
+test-images/
+
+# Logs
+*.log

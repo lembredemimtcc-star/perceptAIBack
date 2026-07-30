@@ -8,9 +8,8 @@ using PerceptAI.API.ML;
 using PerceptAI.API.Services;
 using PerceptAI.API.Settings;
 using Scalar.AspNetCore;
-
+// Debug statements removed
 var builder = WebApplication.CreateBuilder(args);
-
 // Bind to all network interfaces for both HTTP and HTTPS (development only)
 builder.WebHost.UseUrls("http://0.0.0.0:5198", "https://0.0.0.0:7290");
 
@@ -75,8 +74,10 @@ builder.Services.AddHttpClient("supabase", (sp, client) =>
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {settings.ServiceRoleKey}");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
-
+// Debug statement removed
 var app = builder.Build();
+
+// Debug statement removed
 
 if (app.Environment.IsDevelopment())
 {
@@ -92,5 +93,25 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 // app.UseHttpsRedirection(); // Disabled for local development
 app.UseAuthorization();
-app.MapControllers();
+        // Debug endpoint – runs a single local image through the full pipeline
+        app.MapGet("/debug/test", async (Microsoft.AspNetCore.Http.HttpContext ctx) =>
+        {
+            var imgPath = Path.Combine(Directory.GetCurrentDirectory(), "test-images", "example.jpg");
+            if (!File.Exists(imgPath))
+                return Results.NotFound("Test image not found");
+
+            var imgBytes = await File.ReadAllBytesAsync(imgPath);
+            var base64 = Convert.ToBase64String(imgBytes);
+
+            var preprocessor = ctx.RequestServices.GetRequiredService<ImagePreprocessingService>();
+            var normalized = preprocessor.PreprocessBase64Image(base64);
+
+            var detector = ctx.RequestServices.GetRequiredService<EmotionDetectionService>();
+            var (emotion, confidence) = detector.DetectEmotion(normalized);
+
+            return Results.Json(new { emotion, confidence });
+        });
+
+// Debug statement removed
 app.Run();
+
