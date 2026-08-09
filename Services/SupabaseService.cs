@@ -31,6 +31,14 @@ namespace PerceptAI.API.Services
             string cuidador_id,
             bool lido);
 
+        // DTO interno para inserção na tabela `expressoes_faciais`
+        // Campos confirmados pelo schema PostgreSQL real
+        private record ExpressaoRow(
+            int internacao_id,
+            string emocao,    // ENUM: dor|medo|tristeza|enjoo|sono|dormindo|acordado|neutro
+            int confianca,    // 0-100 (percentual inteiro)
+            string timestamp);
+
         // Resposta mínima de detecção (só precisamos do id gerado)
         private record DetectionCreated(string id);
 
@@ -81,6 +89,62 @@ namespace PerceptAI.API.Services
             await InsertAlertAsync(detectionId, cuidadorId);
 
             return true;
+        }
+
+        /// <summary>
+        /// Salva uma detecção na tabela <c>expressoes_faciais</c> (fluxo web).
+        /// Campos baseados no schema PostgreSQL real do Supabase.
+        /// confianca é armazenado como percentual inteiro (0-100).
+        /// internacao_id é INT no banco, convertido de string UUID.
+        /// </summary>
+        public async Task<bool> SaveExpressaoAsync(
+            string internacaoId,
+            string mood,
+            float confidenceRaw)
+        {
+            // Converte confiança de [0.0-1.0] para percentual inteiro [0-100]
+            int confiancaPerc = (int)Math.Round(confidenceRaw * 100);
+
+            // internacao_id é SERIAL INT no banco
+            if (!int.TryParse(internacaoId, out int internacaoIdInt))
+            {
+                _logger.LogError("InternacaoId inválido (não é inteiro): {InternacaoId}", internacaoId);
+                return false;
+            }
+
+            var row = new ExpressaoRow(
+                internacao_id: internacaoIdInt,
+                emocao:        mood,          // nome do campo no banco: emocao
+                confianca:     confiancaPerc,
+                timestamp:     DateTime.UtcNow.ToString("o"));
+
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "expressoes_faciais");
+                httpRequest.Headers.Add("Prefer", "return=minimal");
+                httpRequest.Content = JsonContent.Create(row);
+
+                var response = await _http.SendAsync(httpRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    _logger.LogError(
+                        "Erro ao inserir expressão facial: {Status} — {Body}",
+                        response.StatusCode, body);
+                    return false;
+                }
+
+                _logger.LogInformation(
+                    "Expressão facial salva: internacao={InternacaoId} emocao={Emocao} confianca={Confianca}%",
+                    internacaoId, mood, confiancaPerc);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exceção ao salvar expressão facial para internação {InternacaoId}", internacaoId);
+                return false;
+            }
         }
 
         /// <summary>
