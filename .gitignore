@@ -2,7 +2,6 @@
 bin/
 obj/
 
-<<<<<<< HEAD
 # Visual Studio / Rider / VS Code
 .vs/
 *.user
@@ -41,26 +40,10 @@ ML/model.onnx
 ML/model.onnx.data
 
 # Debug images
-=======
-# Visual Studio
-.vs/
-*.user
-*.suo
-
-# Credenciais e configurações sensíveis
-appsettings.json
-
-# Modelo ONNX (arquivo grande)
-ML/model.onnx
-ML/model.onnx.data
-
-# Pasta de imagens de debug
->>>>>>> 8a630f3b371b52582e8b86d29a36bd7240feb3bd
 test-images/
 
 # Logs
 *.log
-<<<<<<< HEAD
 
 # Test results
 TestResults/
@@ -70,5 +53,3 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
-=======
->>>>>>> 8a630f3b371b52582e8b86d29a36bd7240feb3bd

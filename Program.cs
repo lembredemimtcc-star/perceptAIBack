@@ -13,7 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Bind to all network interfaces for both HTTP and HTTPS (development only)
 builder.WebHost.UseUrls("http://0.0.0.0:5198", "https://0.0.0.0:7290");
 
-<<<<<<< HEAD
 // Carrega .env local (mesmo do front) e mapeia para SupabaseSettings
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envPath))
@@ -29,9 +28,6 @@ if (File.Exists(envPath))
     builder.Configuration["SupabaseSettings:Url"] = builder.Configuration["VITE_SUPABASE_URL"];
     builder.Configuration["SupabaseSettings:ServiceRoleKey"] = builder.Configuration["VITE_SUPABASE_ANON_KEY"];
 }
-
-=======
->>>>>>> 8a630f3b371b52582e8b86d29a36bd7240feb3bd
 // ------------------------------------------------------------------
 // CONFIGURAÇÕES
 // ------------------------------------------------------------------
@@ -132,9 +128,6 @@ app.UseAuthorization();
         });
 
 // Debug statement removed
-<<<<<<< HEAD
 app.MapControllers();
-=======
->>>>>>> 8a630f3b371b52582e8b86d29a36bd7240feb3bd
 app.Run();
 
