@@ -32,12 +32,12 @@ namespace PerceptAI.API.Services
             bool lido);
 
         // DTO interno para inserção na tabela `expressoes_faciais`
-        // Campos confirmados pelo schema PostgreSQL real
+        // Campos confirmados pelo schema Supabase: internacao_id é UUID string
         private record ExpressaoRow(
-            int internacao_id,
-            string emocao,    // ENUM: dor|medo|tristeza|enjoo|sono|dormindo|acordado|neutro
-            int confianca,    // 0-100 (percentual inteiro)
-            string timestamp);
+            string internacao_id, // UUID string
+            string mood,          // ENUM: dor|medo|tristeza|enjoo|sono|dormindo|acordado|neutro
+            int confianca,        // 0-100 (percentual inteiro)
+            string timestamp); // timestamp ISO 8601
 
         // Resposta mínima de detecção (só precisamos do id gerado)
         private record DetectionCreated(string id);
@@ -105,16 +105,16 @@ namespace PerceptAI.API.Services
             // Converte confiança de [0.0-1.0] para percentual inteiro [0-100]
             int confiancaPerc = (int)Math.Round(confidenceRaw * 100);
 
-            // internacao_id é SERIAL INT no banco
-            if (!int.TryParse(internacaoId, out int internacaoIdInt))
+            // internacao_id é UUID string
+            if (string.IsNullOrWhiteSpace(internacaoId))
             {
-                _logger.LogError("InternacaoId inválido (não é inteiro): {InternacaoId}", internacaoId);
+                _logger.LogError("InternacaoId inválido (vazio): {InternacaoId}", internacaoId);
                 return false;
             }
 
             var row = new ExpressaoRow(
-                internacao_id: internacaoIdInt,
-                emocao:        mood,          // nome do campo no banco: emocao
+                internacao_id: internacaoId,
+                mood:          mood,
                 confianca:     confiancaPerc,
                 timestamp:     DateTime.UtcNow.ToString("o"));
 

@@ -13,21 +13,36 @@ var builder = WebApplication.CreateBuilder(args);
 // Bind to all network interfaces for both HTTP and HTTPS (development only)
 builder.WebHost.UseUrls("http://0.0.0.0:5198", "https://0.0.0.0:7290");
 
-// Carrega .env local (mesmo do front) e mapeia para SupabaseSettings
+// Carrega .env local e mapeia para SupabaseSettings
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envPath))
 {
     foreach (var line in File.ReadAllLines(envPath))
     {
+        if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith('#')) continue;
         var idx = line.IndexOf('=');
         if (idx <= 0) continue;
-        var key = line[..idx].Trim().Trim('"');
+        var key   = line[..idx].Trim().Trim('"');
         var value = line[(idx + 1)..].Trim().Trim('"');
         builder.Configuration[key] = value;
     }
-    builder.Configuration["SupabaseSettings:Url"] = builder.Configuration["VITE_SUPABASE_URL"];
-    builder.Configuration["SupabaseSettings:ServiceRoleKey"] = builder.Configuration["VITE_SUPABASE_ANON_KEY"];
+    // URL do Supabase (compartilhada com o front)
+    var supabaseUrl = builder.Configuration["VITE_SUPABASE_URL"]
+                   ?? builder.Configuration["SUPABASE_URL"]
+                   ?? "";
+    // Service Role Key: variável dedicada do backend (prefira esta)
+    // ou fallback para VITE_SUPABASE_ANON_KEY se não houver outra
+    var serviceRoleKey = builder.Configuration["SUPABASE_SERVICE_ROLE_KEY"]
+                      ?? builder.Configuration["VITE_SUPABASE_SERVICE_ROLE_KEY"]
+                      ?? builder.Configuration["VITE_SUPABASE_ANON_KEY"]
+                      ?? "";
+
+    if (!string.IsNullOrWhiteSpace(supabaseUrl))
+        builder.Configuration["SupabaseSettings:Url"] = supabaseUrl;
+    if (!string.IsNullOrWhiteSpace(serviceRoleKey))
+        builder.Configuration["SupabaseSettings:ServiceRoleKey"] = serviceRoleKey;
 }
+
 // ------------------------------------------------------------------
 // CONFIGURAÇÕES
 // ------------------------------------------------------------------
