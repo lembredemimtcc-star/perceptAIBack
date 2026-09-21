@@ -1,0 +1,40 @@
+# Build outputs
+bin/
+obj/
+backend-publish/
+
+# IDE
+.vs/
+.vscode/
+*.sln
+*.user
+*.suo
+
+# Environment
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+TECHNICAL_DOCUMENTATION.md
+*.http
+
+# ML model (copied separately in Dockerfile)
+ML/model.onnx
+
+# Test images
+test-images/
+
+# Logs
+*.log
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Publish profiles
+Properties/PublishProfiles/

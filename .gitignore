@@ -1,0 +1,56 @@
+# Build
+bin/
+obj/
+backend-publish/
+
+# Visual Studio / Rider / VS Code
+.vs/
+*.user
+*.suo
+.vscode/
+*.swp
+*.swo
+
+# .NET
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.cache
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Configuration (local/dev)
+appsettings.Development.json
+appsettings.Local.json
+*.local.json
+launchSettings.json
+
+# Secrets / Environment
+.env
+.env.local
+*.pfx
+*.pem
+
+# ML / Large files
+ML/model.onnx
+ML/model.onnx.data
+
+# Debug images
+test-images/
+
+# Logs
+*.log
+
+# Test results
+TestResults/
+*.trx
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
