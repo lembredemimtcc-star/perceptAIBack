@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: perceptai-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: SupabaseSettings__Url
+        sync: false
+      - key: SupabaseSettings__ServiceRoleKey
+        sync: false
+      - key: DetectionSettings__Threshold
+        value: "0.75"
+    healthCheckPath: /api/detection/health
