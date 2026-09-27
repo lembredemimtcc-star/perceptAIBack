@@ -30,6 +30,11 @@ namespace PerceptAI.API.Services
                 NamedOnnxValue.CreateFromTensor("images", inputTensor)
             };
 
+            if (_modelLoader.Session == null)
+            {
+                throw new InvalidOperationException("O modelo ONNX (ML/model.onnx) não foi carregado na memória do servidor.");
+            }
+
             // 3. Executa a inferência na sessão ativa
             using var results = _modelLoader.Session.Run(inputs);
 

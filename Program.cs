@@ -82,11 +82,21 @@ builder.Services.AddSingleton(sp =>
     {
         modelPath = Path.Combine(Directory.GetCurrentDirectory(), "ML", "model.onnx");
     }
-    if (!File.Exists(modelPath))
+    
+    try
     {
-        throw new FileNotFoundException($"O modelo ONNX não foi encontrado em '{modelPath}'.");
+        if (File.Exists(modelPath))
+        {
+            return new ModelLoader(modelPath);
+        }
     }
-    return new ModelLoader(modelPath);
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[AVISO CRÍTICO] Falha ao carregar o modelo ONNX em '{modelPath}': {ex.Message}");
+    }
+    
+    // Retorna um loader nulo controlado se o modelo falhar
+    return new ModelLoader(null);
 });
 builder.Services.AddSingleton<EmotionDetectionService>();
 builder.Services.AddScoped<SupabaseService>();

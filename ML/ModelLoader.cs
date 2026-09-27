@@ -4,11 +4,14 @@ namespace PerceptAI.API.ML
 {
     public class ModelLoader
     {
-        public InferenceSession Session { get; }
+        public InferenceSession? Session { get; }
 
-        public ModelLoader(string modelPath)
+        public ModelLoader(string? modelPath)
         {
-            Session = new InferenceSession(modelPath);
+            if (!string.IsNullOrWhiteSpace(modelPath) && System.IO.File.Exists(modelPath))
+            {
+                Session = new InferenceSession(modelPath);
+            }
         }
     }
 }
