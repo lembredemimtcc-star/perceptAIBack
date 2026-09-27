@@ -12,5 +12,8 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.2" />
     <PackageReference Include="SixLabors.ImageSharp" Version="2.1.9" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ML\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

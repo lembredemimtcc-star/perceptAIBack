@@ -17,9 +17,8 @@ WORKDIR /app
 # Copy published app
 COPY --from=build /app/publish .
 
-# Copy ML model if it exists (using shell to avoid build failure when file is missing)
-RUN mkdir -p ML && [ -f /src/ML/model.onnx ] && cp /src/ML/model.onnx ML/model.onnx || true
-# Note: Add your model.onnx to ML/ folder before deploying, or mount it at runtime
+# Copy ML model and data files
+RUN mkdir -p ML && (cp -r /src/ML/* ML/ 2>/dev/null || true)
 
 # Expose port (Render sets PORT env var)
 EXPOSE 8080
