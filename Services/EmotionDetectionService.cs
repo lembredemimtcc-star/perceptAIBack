@@ -63,6 +63,29 @@ namespace PerceptAI.API.Services
         }
 
         /// <summary>
+        /// Retorna todas as probabilidades para diagnóstico (útil para depurar viés do modelo).
+        /// </summary>
+        public Dictionary<string, float> GetAllProbabilities(float[] normalizedData)
+        {
+            var inputTensor = new DenseTensor<float>(normalizedData, new[] { 1, 3, 224, 224 });
+            var inputs = new List<NamedOnnxValue>
+            {
+                NamedOnnxValue.CreateFromTensor("input", inputTensor)
+            };
+            using var results = _modelLoader.Session.Run(inputs);
+            var outputValue = results.FirstOrDefault(r => r.Name == "output");
+            if (outputValue == null) return new Dictionary<string, float>();
+
+            float[] logits = outputValue.AsTensor<float>().ToArray();
+            float[] probs = Softmax(logits);
+
+            var dict = new Dictionary<string, float>();
+            for (int i = 0; i < _emotions.Length && i < probs.Length; i++)
+                dict[_emotions[i]] = probs[i];
+            return dict;
+        }
+
+        /// <summary>
         /// Aplica a função de ativação Softmax para normalizar logits em probabilidades.
         /// </summary>
         private float[] Softmax(float[] logits)

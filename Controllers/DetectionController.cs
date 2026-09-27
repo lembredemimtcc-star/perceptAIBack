@@ -94,5 +94,38 @@ namespace PerceptAI.API.Controllers
                 return StatusCode(500, new { message = "Erro interno ao processar a detecção." });
             }
         }
+
+        /// <summary>
+        /// Endpoint de diagnóstico: recebe a mesma imagem e retorna a confiança de CADA emoção.
+        /// Útil para descobrir se o modelo tem viés ou se a ordem das classes está errada.
+        /// POST /api/detection/debug
+        /// </summary>
+        [HttpPost("debug")]
+        public IActionResult Debug([FromBody] DetectionRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Image))
+                return BadRequest(new { message = "Imagem vazia." });
+
+            try
+            {
+                float[] normalized = _preprocessingService.PreprocessBase64Image(request.Image);
+                var allProbs = _detectionService.GetAllProbabilities(normalized);
+
+                // Ordena por confiança decrescente para facilitar leitura
+                var sorted = allProbs
+                    .OrderByDescending(kv => kv.Value)
+                    .Select(kv => new { emocao = kv.Key, confianca = Math.Round(kv.Value * 100, 2) });
+
+                return Ok(new
+                {
+                    vencedor = sorted.First().emocao,
+                    ranking = sorted
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }
