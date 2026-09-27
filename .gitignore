@@ -37,8 +37,7 @@ launchSettings.json
 *.pem
 
 # ML / Large files
-ML/model.onnx
-ML/model.onnx.data
+# ML/model.onnx (permitido para deploy no Render)
 
 # Debug images
 test-images/
