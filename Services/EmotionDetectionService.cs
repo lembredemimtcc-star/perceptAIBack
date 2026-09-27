@@ -46,10 +46,13 @@ namespace PerceptAI.API.Services
             var outputTensor = outputValue.AsTensor<float>();
             float[] logits = outputTensor.ToArray();
 
-            // 5. Aplica a função matemática Softmax para obter as probabilidades reais [0, 1]
+            // Aplica Softmax para obter probabilidades reais
             float[] probabilities = Softmax(logits);
 
-            // 6. Encontra o índice da emoção com maior grau de confiança
+            // Se o modelo estiver dando 'neutro' (índice 5) com confiança alta mas houver outra classe forte,
+            // ou se a ordem das classes do dataset do PyTorch usou ordenação alfabética de pastas:
+            // 0: acordado | 1: desassordado/dormindo | 2: dor | 3: enjoo | 4: medo | 5: neutro | 6: sono | 7: tristeza
+            
             int maxIndex = 0;
             float maxConfidence = -1.0f;
 
@@ -62,7 +65,30 @@ namespace PerceptAI.API.Services
                 }
             }
 
-            return (_emotions[maxIndex], maxConfidence);
+            // Se a maior classe for neutro, mas houver uma emoção clínica (dor, medo, tristeza, enjoo) com mais de 15% de confiança,
+            // prioriza a emoção clínica para o monitoramento médico!
+            string selectedEmotion = _emotions[maxIndex];
+            if (selectedEmotion == "neutro")
+            {
+                int clinicalIndex = -1;
+                float maxClinicalConf = 0.15f; // limiar de 15%
+                for (int i = 0; i < probabilities.Length; i++)
+                {
+                    string name = _emotions[i];
+                    if (name != "neutro" && name != "acordado" && name != "dormindo" && probabilities[i] > maxClinicalConf)
+                    {
+                        maxClinicalConf = probabilities[i];
+                        clinicalIndex = i;
+                    }
+                }
+                if (clinicalIndex >= 0)
+                {
+                    selectedEmotion = _emotions[clinicalIndex];
+                    maxConfidence = probabilities[clinicalIndex];
+                }
+            }
+
+            return (selectedEmotion, maxConfidence);
         }
 
         /// <summary>
