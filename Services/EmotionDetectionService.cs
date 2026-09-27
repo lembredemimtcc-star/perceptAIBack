@@ -24,20 +24,23 @@ namespace PerceptAI.API.Services
             // 1. Cria o tensor denso no formato [1, 3, 224, 224]
             var inputTensor = new DenseTensor<float>(normalizedData, new[] { 1, 3, 224, 224 });
 
-            // 2. Prepara a entrada da sessão com o nome 'input' configurado na exportação ONNX
+            // 2. Prepara a entrada com o nome 'images' (conforme exportação ONNX: input_names=["images"])
             var inputs = new List<NamedOnnxValue>
             {
-                NamedOnnxValue.CreateFromTensor("input", inputTensor)
+                NamedOnnxValue.CreateFromTensor("images", inputTensor)
             };
 
             // 3. Executa a inferência na sessão ativa
             using var results = _modelLoader.Session.Run(inputs);
 
-            // 4. Extrai a saída com o nome 'output'
-            var outputValue = results.FirstOrDefault(r => r.Name == "output");
+            // 4. Extrai a saída com o nome 'logits' (conforme exportação ONNX: output_names=["logits"])
+            var outputValue = results.FirstOrDefault(r => r.Name == "logits");
             if (outputValue == null)
             {
-                throw new InvalidOperationException("Não foi possível encontrar a camada de saída 'output' no modelo ONNX.");
+                // Fallback: tenta pegar o primeiro output disponível (compatibilidade)
+                outputValue = results.FirstOrDefault();
+                if (outputValue == null)
+                    throw new InvalidOperationException("Nenhuma saída encontrada no modelo ONNX.");
             }
 
             var outputTensor = outputValue.AsTensor<float>();
@@ -70,10 +73,11 @@ namespace PerceptAI.API.Services
             var inputTensor = new DenseTensor<float>(normalizedData, new[] { 1, 3, 224, 224 });
             var inputs = new List<NamedOnnxValue>
             {
-                NamedOnnxValue.CreateFromTensor("input", inputTensor)
+                NamedOnnxValue.CreateFromTensor("images", inputTensor) // nome correto: "images"
             };
             using var results = _modelLoader.Session.Run(inputs);
-            var outputValue = results.FirstOrDefault(r => r.Name == "output");
+            var outputValue = results.FirstOrDefault(r => r.Name == "logits") // nome correto: "logits"
+                           ?? results.FirstOrDefault();
             if (outputValue == null) return new Dictionary<string, float>();
 
             float[] logits = outputValue.AsTensor<float>().ToArray();
