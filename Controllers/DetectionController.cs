@@ -88,10 +88,10 @@ namespace PerceptAI.API.Controllers
             {
                 return BadRequest(new { message = "Formato Base64 da imagem é inválido." });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Erro interno inesperado
-                return StatusCode(500, new { message = "Erro interno ao processar a detecção." });
+                // Retorna o detalhe da exceção para diagnóstico preciso
+                return StatusCode(500, new { message = "Erro interno ao processar a detecção.", error = ex.Message, detail = ex.ToString() });
             }
         }
 
