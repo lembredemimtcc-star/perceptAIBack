@@ -60,11 +60,16 @@ namespace PerceptAI.API.Services
             return Softmax(logits);
         }
 
+        // Confiança mínima para reportar uma emoção específica.
+        // Abaixo disso, retorna "neutro" para evitar falsos positivos com rostos ambíguos.
+        private const float MinEmotionThreshold = 0.30f;
+
         /// <summary>
         /// Analisa os dois estados do paciente simultaneamente:
         /// 1. Estado Fisiológico: "dormindo" ou "acordado".
         ///    Se dormindo, EstadoEmocional é null (não precisa de emoção).
-        /// 2. Se acordado: EstadoEmocional identifica a expressão ("dor", "enjoo", "medo", "tristeza", "neutro", "sono").
+        /// 2. Se acordado: EstadoEmocional identifica a expressão com confiança >= 30%;
+        ///    caso nenhuma emoção passe o limiar, retorna "neutro".
         /// </summary>
         public DualStateResult AnalyzeDualState(float[] normalizedData)
         {
@@ -86,7 +91,7 @@ namespace PerceptAI.API.Services
                 }
             }
 
-            // Identifica o vencedor absoluto global
+            // Identifica o vencedor absoluto global (entre todas as 8 classes)
             int globalMaxIndex = 0;
             float globalMaxConf = -1.0f;
             for (int i = 0; i < probabilities.Length; i++)
@@ -116,14 +121,25 @@ namespace PerceptAI.API.Services
             }
             else
             {
-                // Paciente acordado
-                float confFisiologica = MathF.Max(pAcordado, 1.0f - pDormindo);
-                string emocaoDetectada = _emotions[bestEmotionIndex];
+                // Paciente acordado.
+                // Aplica threshold mínimo: se nenhuma emoção ativa passar o limiar de confiança,
+                // retorna "neutro" para evitar falsos positivos em imagens ambíguas de webcam.
+                string emocaoDetectada;
+                if (maxEmotionConf >= MinEmotionThreshold)
+                {
+                    emocaoDetectada = _emotions[bestEmotionIndex];
+                }
+                else
+                {
+                    // Confiança insuficiente → reporta neutro (index 5)
+                    bestEmotionIndex = 5;
+                    emocaoDetectada = "neutro";
+                }
 
                 return new DualStateResult
                 {
                     EstadoFisiologico = "acordado",
-                    ConfiancaFisiologica = confFisiologica,
+                    ConfiancaFisiologica = pAcordado,
                     EstadoEmocional = emocaoDetectada,
                     ConfiancaEmocional = maxEmotionConf,
                     PrimaryEmotion = emocaoDetectada,
