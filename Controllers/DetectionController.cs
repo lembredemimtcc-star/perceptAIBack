@@ -75,14 +75,18 @@ namespace PerceptAI.API.Controllers
                 // Pré-processamento da imagem Base64
                 float[] normalized = _preprocessingService.PreprocessBase64Image(request.Image);
 
-                // Inferência do modelo
-                var (emotion, confidence) = _detectionService.DetectEmotion(normalized);
+                // Inferência do modelo com dois estados simultâneos (fisiológico e emocional)
+                var analysis = _detectionService.AnalyzeDualState(normalized);
 
                 // Monta a resposta
                 var response = new DetectionResponse
                 {
-                    Emotion = emotion,
-                    Confidence = confidence,
+                    Emotion = analysis.PrimaryEmotion,
+                    Confidence = analysis.PrimaryConfidence,
+                    EstadoFisiologico = analysis.EstadoFisiologico,
+                    ConfiancaFisiologica = analysis.ConfiancaFisiologica,
+                    EstadoEmocional = analysis.EstadoEmocional,
+                    ConfiancaEmocional = analysis.ConfiancaEmocional,
                     Timestamp = DateTime.UtcNow
                 };
 
@@ -90,15 +94,24 @@ namespace PerceptAI.API.Controllers
                 if (temInternacao)
                 {
                     // Fluxo web: salva em expressoes_faciais
+                    // Se dormindo, salva mood = "dormindo"
+                    // Se acordado, salva a emoção detectada (ex: dor, neutro, etc.)
+                    string moodParaSalvar = analysis.EstadoFisiologico == "dormindo"
+                        ? "dormindo"
+                        : (analysis.EstadoEmocional ?? "acordado");
+                    float confParaSalvar = analysis.EstadoFisiologico == "dormindo"
+                        ? analysis.ConfiancaFisiologica
+                        : (analysis.ConfiancaEmocional ?? analysis.ConfiancaFisiologica);
+
                     await _supabaseService.SaveExpressaoAsync(
                         request.InternacaoId!,
-                        emotion,
-                        confidence);
+                        moodParaSalvar,
+                        confParaSalvar);
                 }
-                else if (temPatient && confidence >= _threshold)
+                else if (temPatient && analysis.PrimaryConfidence >= _threshold)
                 {
                     // Fluxo legado do app mobile: salva em detections
-                    await _supabaseService.SaveDetectionAsync(request.PatientId, emotion, confidence, response.Timestamp);
+                    await _supabaseService.SaveDetectionAsync(request.PatientId, analysis.PrimaryEmotion, analysis.PrimaryConfidence, response.Timestamp);
                 }
 
                 return Ok(response);
@@ -115,8 +128,8 @@ namespace PerceptAI.API.Controllers
         }
 
         /// <summary>
-        /// Endpoint de diagnóstico: recebe a mesma imagem e retorna a confiança de CADA emoção.
-        /// Útil para descobrir se o modelo tem viés ou se a ordem das classes está errada.
+        /// Endpoint de diagnóstico: recebe a mesma imagem e retorna a confiança de CADA emoção
+        /// além dos estados fisiológico e emocional calculados.
         /// POST /api/detection/debug
         /// </summary>
         [HttpPost("debug")]
@@ -128,6 +141,7 @@ namespace PerceptAI.API.Controllers
             try
             {
                 float[] normalized = _preprocessingService.PreprocessBase64Image(request.Image);
+                var analysis = _detectionService.AnalyzeDualState(normalized);
                 var allProbs = _detectionService.GetAllProbabilities(normalized);
 
                 // Ordena por confiança decrescente para facilitar leitura
@@ -137,6 +151,10 @@ namespace PerceptAI.API.Controllers
 
                 return Ok(new
                 {
+                    estadoFisiologico = analysis.EstadoFisiologico,
+                    confiancaFisiologica = Math.Round(analysis.ConfiancaFisiologica * 100, 2),
+                    estadoEmocional = analysis.EstadoEmocional,
+                    confiancaEmocional = analysis.ConfiancaEmocional.HasValue ? Math.Round(analysis.ConfiancaEmocional.Value * 100, 2) : (double?)null,
                     vencedor = sorted.First().emocao,
                     ranking = sorted
                 });
