@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using PerceptAI.API.ML;
 using PerceptAI.API.Models;
 using PerceptAI.API.Services;
 
@@ -14,19 +15,37 @@ namespace PerceptAI.API.Controllers
         private readonly ImagePreprocessingService _preprocessingService;
         private readonly EmotionDetectionService _detectionService;
         private readonly SupabaseService _supabaseService;
+        private readonly ModelLoader _modelLoader;
         private readonly double _threshold;
 
         public DetectionController(
             ImagePreprocessingService preprocessingService,
             EmotionDetectionService detectionService,
             SupabaseService supabaseService,
+            ModelLoader modelLoader,
             IConfiguration configuration)
         {
             _preprocessingService = preprocessingService;
             _detectionService = detectionService;
             _supabaseService = supabaseService;
+            _modelLoader = modelLoader;
             // Carrega o threshold padrão (75%) do appsettings.json
             _threshold = configuration.GetValue<double>("DetectionSettings:Threshold", 0.75);
+        }
+
+        /// <summary>
+        /// Endpoint de verificação de saúde da API (usado pelo healthCheckPath do Render e monitoramento).
+        /// GET /api/detection/health
+        /// </summary>
+        [HttpGet("health")]
+        public IActionResult Health()
+        {
+            return Ok(new
+            {
+                status = "healthy",
+                modelLoaded = _modelLoader.Session != null,
+                timestamp = DateTime.UtcNow
+            });
         }
 
         /// <summary>
