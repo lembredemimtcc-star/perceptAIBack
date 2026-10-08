@@ -17,8 +17,8 @@ WORKDIR /app
 # Copy published app
 COPY --from=build /app/publish .
 
-# Copy ML model and data files
-RUN mkdir -p ML && (cp -r /src/ML/* ML/ 2>/dev/null || true)
+# Copy ML model and data files from the build stage (where /src exists)
+COPY --from=build /src/ML ./ML/
 
 # Expose port (Render sets PORT env var)
 EXPOSE 8080

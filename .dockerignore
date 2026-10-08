@@ -23,8 +23,8 @@ README.md
 TECHNICAL_DOCUMENTATION.md
 *.http
 
-# ML model (copied separately in Dockerfile)
-ML/model.onnx
+# ML model (incluído no build context para o COPY --from=build funcionar)
+# ML/model.onnx  ← NÃO excluir: necessário para o Dockerfile copiar para o container
 
 # Test images
 test-images/

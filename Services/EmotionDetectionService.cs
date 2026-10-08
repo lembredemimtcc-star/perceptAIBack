@@ -54,10 +54,7 @@ namespace PerceptAI.API.Services
             // Aplica Softmax para obter probabilidades reais
             float[] probabilities = Softmax(logits);
 
-            // Se o modelo estiver dando 'neutro' (índice 5) com confiança alta mas houver outra classe forte,
-            // ou se a ordem das classes do dataset do PyTorch usou ordenação alfabética de pastas:
-            // 0: acordado | 1: desassordado/dormindo | 2: dor | 3: enjoo | 4: medo | 5: neutro | 6: sono | 7: tristeza
-            
+
             int maxIndex = 0;
             float maxConfidence = -1.0f;
 
@@ -70,30 +67,11 @@ namespace PerceptAI.API.Services
                 }
             }
 
-            // Se a maior classe for neutro, mas houver uma emoção clínica (dor, medo, tristeza, enjoo) com mais de 15% de confiança,
-            // prioriza a emoção clínica para o monitoramento médico!
-            string selectedEmotion = _emotions[maxIndex];
-            if (selectedEmotion == "neutro")
-            {
-                int clinicalIndex = -1;
-                float maxClinicalConf = 0.15f; // limiar de 15%
-                for (int i = 0; i < probabilities.Length; i++)
-                {
-                    string name = _emotions[i];
-                    if (name != "neutro" && name != "acordado" && name != "dormindo" && probabilities[i] > maxClinicalConf)
-                    {
-                        maxClinicalConf = probabilities[i];
-                        clinicalIndex = i;
-                    }
-                }
-                if (clinicalIndex >= 0)
-                {
-                    selectedEmotion = _emotions[clinicalIndex];
-                    maxConfidence = probabilities[clinicalIndex];
-                }
-            }
-
-            return (selectedEmotion, maxConfidence);
+            // Retorna diretamente a classe com maior probabilidade (argmax).
+            // O modelo foi treinado para distinguir as 8 classes — não há necessidade
+            // de sobrescrever o resultado. A lógica anterior (priorizar emoções clínicas
+            // quando "neutro" > 15%) causava falsos positivos frequentes.
+            return (_emotions[maxIndex], maxConfidence);
         }
 
         /// <summary>
@@ -106,6 +84,7 @@ namespace PerceptAI.API.Services
             {
                 NamedOnnxValue.CreateFromTensor("images", inputTensor) // nome correto: "images"
             };
+            if (_modelLoader.Session == null) return new Dictionary<string, float>();
             using var results = _modelLoader.Session.Run(inputs);
             var outputValue = results.FirstOrDefault(r => r.Name == "logits") // nome correto: "logits"
                            ?? results.FirstOrDefault();
