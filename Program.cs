@@ -80,26 +80,64 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton<ImagePreprocessingService>();
 builder.Services.AddSingleton(sp =>
 {
-    var modelPath = Path.Combine(AppContext.BaseDirectory, "ML", "model.onnx");
-    if (!File.Exists(modelPath))
+    // Caminhos para os 2 modelos separados
+    var physioModelPath = Path.Combine(AppContext.BaseDirectory, "ML", "perceptai_physio.onnx");
+    var emotionModelPath = Path.Combine(AppContext.BaseDirectory, "ML", "perceptai_emotion.onnx");
+
+    // Fallback para diretório atual
+    if (!File.Exists(physioModelPath))
+        physioModelPath = Path.Combine(Directory.GetCurrentDirectory(), "ML", "perceptai_physio.onnx");
+    if (!File.Exists(emotionModelPath))
+        emotionModelPath = Path.Combine(Directory.GetCurrentDirectory(), "ML", "perceptai_emotion.onnx");
+
+    // Verifica se os novos modelos existem
+    bool physioExists = File.Exists(physioModelPath);
+    bool emotionExists = File.Exists(emotionModelPath);
+
+    // Se os novos modelos existem, carrega os 2
+    if (physioExists && emotionExists)
     {
-        modelPath = Path.Combine(Directory.GetCurrentDirectory(), "ML", "model.onnx");
-    }
-    
-    try
-    {
-        if (File.Exists(modelPath))
+        try
         {
-            return new ModelLoader(modelPath);
+            Console.WriteLine($"[ModelLoader] Carregando modelo fisiológico: {physioModelPath}");
+            Console.WriteLine($"[ModelLoader] Carregando modelo emocional: {emotionModelPath}");
+            return new ModelLoader(physioModelPath, emotionModelPath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AVISO CRÍTICO] Falha ao carregar modelos ONNX: {ex.Message}");
         }
     }
-    catch (Exception ex)
+    else
     {
-        Console.WriteLine($"[AVISO CRÍTICO] Falha ao carregar o modelo ONNX em '{modelPath}': {ex.Message}");
+        // Fallback para modelo legado (único) se os novos não existirem
+        var legacyModelPath = Path.Combine(AppContext.BaseDirectory, "ML", "model.onnx");
+        if (!File.Exists(legacyModelPath))
+            legacyModelPath = Path.Combine(Directory.GetCurrentDirectory(), "ML", "model.onnx");
+
+        if (File.Exists(legacyModelPath))
+        {
+            Console.WriteLine($"[ModelLoader] Carregando modelo legado (único): {legacyModelPath}");
+            try
+            {
+                return new ModelLoader(legacyModelPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AVISO CRÍTICO] Falha ao carregar modelo legado: {ex.Message}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"[AVISO CRÍTICO] Nenhum modelo ONNX encontrado:");
+            Console.WriteLine($"  - Fisiológico: {physioModelPath} ({(physioExists ? "EXISTS" : "NOT FOUND")})");
+            Console.WriteLine($"  - Emocional: {emotionModelPath} ({(emotionExists ? "EXISTS" : "NOT FOUND")})");
+            Console.WriteLine($"  - Legado: {legacyModelPath} (NOT FOUND)");
+        }
     }
-    
-    // Retorna um loader nulo controlado se o modelo falhar
-    return new ModelLoader(null);
+
+    // Retorna um loader nulo controlado se nenhum modelo for encontrado
+    return new ModelLoader(null, null);
 });
 builder.Services.AddSingleton<EmotionDetectionService>();
 builder.Services.AddScoped<SupabaseService>();
